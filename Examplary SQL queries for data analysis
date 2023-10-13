@@ -1,0 +1,55 @@
+-- Total sales per month per each year
+
+with SalesPerMonth as(
+  select round(sum(LineTotal),2), extract(month from OrderDate) as Month, extract(year from OrderDate) as Year
+  from case_study.orders
+  group by extract(year from OrderDate), extract(month from OrderDate)
+)
+
+select *
+from SalesPerMonth
+order by year, month
+
+-- Total sales per month
+
+with SalesPerMonth as(
+  select round(sum(LineTotal),2) as TotalSales, extract(month from OrderDate) as Month
+  from case_study.orders
+  group by extract(month from OrderDate)
+)
+select *
+from SalesPerMonth
+order by Month
+
+-- 5 biggest single orders for each category
+
+with categories as(
+  select p.ProductID as ProductID, c.CategoryID as CategoryID
+  from case_study.productsubcategories s join case_study.products p on s.SubCategoryID=p.SubCategoryID join case_study.productcategories c on c.CategoryID= s.CategoryID 
+)
+, single_order as(
+  select round(sum(LineTotal),2) as SumLineTotal, c.CategoryID as CategoryID, SalesOrderID
+  from categories c join case_study.orders o on c.ProductID=o.ProductID
+  group by SalesOrderID, c.CategoryID
+)
+, ranked as(
+  select SumLineTotal, CategoryID, SalesOrderID, dense_rank() over(partition by CategoryID order by SumLineTotal desc) as rank
+  from single_order
+)
+
+select distinct SumLineTotal, CategoryID, rank
+from ranked
+where rank <=5 
+order by CategoryID, rank
+
+-- Total sales for each subcategory
+
+select round(sum(LineTotal), 2) as TotalSales, p.SubCategoryID as SubCategory
+from case_study.orders o join case_study.products p on o.ProductID = p.ProductID 
+group by p.SubCategoryID
+order by TotalSales desc
+
+
+
+
+
